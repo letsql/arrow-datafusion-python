@@ -33,6 +33,7 @@ use crate::dataset::Dataset;
 use crate::errors::{py_datafusion_err, DataFusionError};
 use crate::expr::PyExpr;
 use crate::physical_plan::PyExecutionPlan;
+use crate::py_record_batch_provider::PyRecordBatchProvider;
 use crate::record_batch::PyRecordBatchStream;
 use crate::sql::logical::PyLogicalPlan;
 use crate::store::StorageContexts;
@@ -40,8 +41,9 @@ use crate::udaf::PyAggregateUDF;
 use crate::udf::PyScalarUDF;
 use crate::utils::{get_tokio_runtime, wait_for_future};
 use datafusion::arrow::datatypes::{DataType, Schema};
+use datafusion::arrow::ffi_stream::ArrowArrayStreamReader;
 use datafusion::arrow::pyarrow::PyArrowType;
-use datafusion::arrow::record_batch::RecordBatch;
+use datafusion::arrow::record_batch::{RecordBatch, RecordBatchReader};
 use datafusion::datasource::file_format::file_compression_type::FileCompressionType;
 use datafusion::datasource::MemTable;
 use datafusion::datasource::TableProvider;
@@ -430,6 +432,19 @@ impl PySessionContext {
     pub fn deregister_table(&mut self, name: &str) -> PyResult<()> {
         self.ctx
             .deregister_table(name)
+            .map_err(DataFusionError::from)?;
+        Ok(())
+    }
+
+    pub fn register_record_batch_reader(
+        &mut self,
+        name: &str,
+        reader: PyArrowType<ArrowArrayStreamReader>,
+    ) -> PyResult<()> {
+        let reader = reader.0;
+        let table = PyRecordBatchProvider::new(reader);
+        self.ctx
+            .register_table(name, Arc::new(table))
             .map_err(DataFusionError::from)?;
         Ok(())
     }

@@ -46,6 +46,7 @@ pub mod expr;
 #[allow(clippy::borrow_deref_ref)]
 mod functions;
 pub mod physical_plan;
+mod py_record_batch_provider;
 mod pyarrow_filter_expression;
 mod record_batch;
 pub mod sql;
